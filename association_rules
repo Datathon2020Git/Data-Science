@@ -1,0 +1,53 @@
+setwd("C:/Users/SpirosAvgoustatos/Desktop/DATATHON DATASET")
+library(readr)
+library(dplyr)
+library(arules)
+occupations<-read_csv("o.csv")
+skills<-read_csv("s.csv")
+relations<-read_csv("osr.csv")
+
+nrow(occupations)
+nrow(skills)
+nrow(relations)
+
+occupations<-occupations[,-c(1,3,6,7,8,9,11,12)]
+skills<-skills[,-c(1,7,8,9,10,11,12)]
+
+names(occupations)<-c("Occ_Uri","Occ_title","Alt_Occ_title","Occ_scope","Occ_description")
+
+names(relations)<-c("Occ_Uri","relationType","skillType","skill_Uri")
+
+names(skills)<-c("skill_Uri","skill_type","skill_reuse_level","skill_title","alt_skill_title","skill_description")
+
+temp<-merge(occupations,relations,by="Occ_Uri")
+occ_skills<-merge(temp,skills,by="skill_Uri")
+occ_skills<-occ_skills[,-c(1,2)]
+
+
+
+tt<-as.data.frame(aggregate(skill_title ~ Occ_title, data = occ_skills, paste, collapse = ","))
+
+
+
+# Using a CSV ####
+# Create a temporary directory
+write.csv(tt,"tt.csv", quote = FALSE, row.names = FALSE)
+
+
+tr <- read.transactions('tt.csv', format = 'basket', sep=',')
+
+if (!require("RColorBrewer")) {
+  # install color package of R
+  install.packages("RColorBrewer")
+  #include library RColorBrewer
+  library(RColorBrewer)
+}
+itemFrequencyPlot(tr,topN=20,type="absolute",col=brewer.pal(8,'Pastel2'), main="Absolute Item Frequency Plot")
+
+
+association.rules <- apriori(tr, parameter = list(supp=0.01, conf=0.65,maxlen=5))
+summary(association.rules)
+inspect(association.rules[1:10])
+
+top10subRules <- head(association.rules, n = 50, by = "count")
+plot(top10subRules, method = "graph",  engine = "htmlwidget")
